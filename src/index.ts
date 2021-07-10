@@ -16,8 +16,8 @@ const startVideStream = async (videoElement: HTMLVideoElement): Promise<void> =>
 const blur = async (video: HTMLVideoElement, canvas: HTMLCanvasElement, net: bodyPix.BodyPix): Promise<void> => {
 	const segmentation = await net.segmentPerson(video);
 
-	const backgroundBlurAmount = 10;
-	const edgeBlurAmount = 2;
+	const backgroundBlurAmount = 15;
+	const edgeBlurAmount = 6;
 	const flipHorizontal = false;
 
 	bodyPix.drawBokehEffect(canvas, video, segmentation, backgroundBlurAmount, edgeBlurAmount, flipHorizontal);
@@ -27,7 +27,7 @@ const blur = async (video: HTMLVideoElement, canvas: HTMLCanvasElement, net: bod
 const loadBodyPix = async (video: HTMLVideoElement, canvas: HTMLCanvasElement): Promise<void> => {
 	const options: ModelConfig = {
 		multiplier: 1,
-		outputStride: 32,
+		outputStride: 16,
 		quantBytes: 4,
 		architecture: 'ResNet50'
 	};
