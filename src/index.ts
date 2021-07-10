@@ -1,75 +1,56 @@
-import './styles.scss';
-import * as tf from '@tensorflow/tfjs';
+import './styles/style.scss';
 import * as bodyPix from '@tensorflow-models/body-pix';
-import 'gapi.client';
+import { ModelConfig } from '@tensorflow-models/body-pix/dist/body_pix_model';
+import * as tf from '@tensorflow/tfjs';
 
+const startVideStream = async (videoElement: HTMLVideoElement): Promise<void> => {
+	videoElement.srcObject = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
 
-const detectBody = async (webcamElement: HTMLVideoElement): Promise<void> => {
-	const net = await bodyPix.load();
-	const t = tf;
-	const personSegmentation = await net.segmentPerson(webcamElement, { scoreThreshold: 0.9 });
-	if (personSegmentation != null) {
-		drawBody(personSegmentation, webcamElement);
-	}
-	window.requestAnimationFrame(() => detectBody(webcamElement));
+	videoElement.onloadedmetadata = (): void => {
+		videoElement.width = videoElement.videoWidth;
+		videoElement.height = videoElement.videoHeight;
+	};
+	await videoElement.play();
 };
 
-const webCam = () => {
-	const video = document.querySelector('#videoElement') as HTMLVideoElement;
-	const constraints = { video: { frameRate: { ideal: 24, max: 24 } } };
+const blur = async (video: HTMLVideoElement, canvas: HTMLCanvasElement, net: bodyPix.BodyPix): Promise<void> => {
+	const segmentation = await net.segmentPerson(video);
 
-	if (navigator.mediaDevices.getUserMedia && video) {
-		navigator.mediaDevices.getUserMedia(constraints)
-			.then(function(stream) {
-				video.srcObject = stream;
-				void detectBody(video);
-			})
-			.catch(function(err0r) {
-				console.error('Something went wrong! ', err0r);
-			});
-	}
+	const backgroundBlurAmount = 10;
+	const edgeBlurAmount = 2;
+	const flipHorizontal = false;
+
+	bodyPix.drawBokehEffect(canvas, video, segmentation, backgroundBlurAmount, edgeBlurAmount, flipHorizontal);
+	await blur(video, canvas, net);
 };
 
-
-const drawBody = (personSegmentation: bodyPix.SemanticPersonSegmentation, camera: HTMLVideoElement) => {
-	const canvasPerson = document.querySelector('canvas');
-	let contextPerson = canvasPerson?.getContext('2d');
-	if (canvasPerson && contextPerson) {
-		contextPerson.drawImage(camera, 0, 0, camera.width, camera.height);
-		let imageData = contextPerson.getImageData(0, 0, camera.width, camera.height);
-		let pixel = imageData.data;
-		for (var p = 0; p < pixel.length; p += 4) {
-			if (personSegmentation.data[p / 4] == 0) {
-				pixel[p + 3] = 0;
-			}
-		}
-		// const backgroundDarkeningMask = bodyPix.toMask(personSegmentation);
-
-		// const opacity = 1;
-		// const maskBlurAmount = 0;
-		// const flipHorizontal = true;
-		// const img = new Image();
-		// img.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Lower_Manhattan_skyline_-_June_2017.jpg/1920px-Lower_Manhattan_skyline_-_June_2017.jpg';
-
-		// bodyPix.drawMask(
-		//   canvasPerson, camera, img, opacity, maskBlurAmount, flipHorizontal);
-		contextPerson.putImageData(imageData, 0, 0);
+const loadBodyPix = async (video: HTMLVideoElement, canvas: HTMLCanvasElement): Promise<void> => {
+	const options: ModelConfig = {
+		multiplier: 1,
+		outputStride: 32,
+		quantBytes: 4,
+		architecture: 'ResNet50'
+	};
+	try {
+		const net = await bodyPix.load(options);
+		void await blur(video, canvas, net);
+	} catch (e) {
+		console.error('Load error: ', e);
 	}
 };
 
-function getBase64Image(img: HTMLImageElement) {
-	const canvas = document.createElement('canvas');
-	canvas.width = img.width;
-	canvas.height = img.height;
+const init = (): void => {
+	tf.getBackend();
+	const video = document.getElementById('videoElement') as HTMLVideoElement;
+	const canvas = document.getElementById('canvasPerson') as HTMLCanvasElement;
 	const ctx = canvas.getContext('2d');
-	ctx?.drawImage(img, 0, 0);
-	var dataURL = canvas.toDataURL('image/png');
-	return dataURL.replace(/^data:image\/(png|jpg);base64,/, '');
-}
+	ctx.fillStyle = 'black';
+	ctx.fillRect(0, 0, canvas.width, canvas.height);
+	video.onloadeddata = (): void => {
+		void loadBodyPix(video, canvas);
+	};
 
+	void startVideStream(video);
+};
 
-function init() {
-	webCam();
-}
-
-window.onload = () => init();
+window.onload = (): void => init();

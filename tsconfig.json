@@ -1,23 +1,10 @@
 {
   "compilerOptions": {
-	"target": "es5",
-	"module": "esnext",
-	"lib": [
-	  "es2018",
-	  "DOM"
-	],
-	"noEmitOnError": true,
-	"declaration": false,
-	"sourceMap": true,
-	"outDir": "lib",
-	"strict": true,
-	"noImplicitAny": true,
-	"strictFunctionTypes": true,
-	"alwaysStrict": true,
-	"moduleResolution": "node",
-	"allowSyntheticDefaultImports": true,
-	"esModuleInterop": true,
-	"inlineSources": true,
-	"pretty": true
+    "outDir": "./dist/",
+    "sourceMap": true,
+    "noImplicitAny": true,
+    "module": "commonjs",
+    "target": "es5",
+    "allowJs": true
   }
 }
